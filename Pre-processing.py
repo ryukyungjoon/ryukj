@@ -1,0 +1,263 @@
+from sklearn.preprocessing import minmax_scale, StandardScaler, QuantileTransformer, quantile_transform
+from imblearn.over_sampling import SMOTE
+from imblearn.under_sampling import RandomUnderSampler
+from matplotlib import pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.neural_network import MLPClassifier
+from sklearn.model_selection import cross_val_predict, cross_val_score
+from sklearn.metrics import confusion_matrix, classification_report
+
+import numpy as np
+import pandas as pd
+
+class Pre_Processing:
+
+    def data_cleaning(data):
+        print("Data Cleaning...")
+        data1 = data.dropna(axis=0, how='any')   # Remove Null values records
+        y, x = data1['Label'], data1.drop('Label', 1)
+        df = x.astype('float')  # dataFrame 타입 변환 [object->float64]
+        df = df.replace(np.inf, np.nan)  # inf 값을 nan 값으로 replace
+        df_max = df.max().max()
+        x = df.replace(np.nan, df_max)  # inf 값을 제외한 값 중, 가장 큰 값인 655453030.0을 inf값 대신 넣어준다.
+
+        return x, y
+
+    def semi_balancing(x, y, features):
+        down_dic ={
+            'BENIGN': 250000,
+            'Bot': 1956,
+            'DDoS': 128025,
+            'DoS GoldenEye': 10293,
+            'DoS Hulk': 230124,
+            'DoS Slowhttptest': 5499,
+            'DoS slowloris': 5796,
+            'FTP-Patator': 7935,
+            'Heartbleed': 11,
+            'Infiltration': 36,
+            'SSH-Patator': 5897,
+            'PortScan': 158804,
+            'Web Attack Brute Force': 1507,
+            'Web Attack Sql Injection': 21,
+            'Web Attack XSS': 652
+        }
+        up_dic = {
+            'BENIGN': 250000,
+            'Bot': 5000,
+            'DDoS': 128025,
+            'DoS GoldenEye': 10293,
+            'DoS Hulk': 230124,
+            'DoS Slowhttptest': 5499,
+            'DoS slowloris': 5796,
+            'FTP-Patator': 7935,
+            'Heartbleed': 5000,
+            'Infiltration': 5000,
+            'SSH-Patator': 5897,
+            'PortScan': 158804,
+            'Web Attack Brute Force': 5000,
+            'Web Attack Sql Injection': 5000,
+            'Web Attack XSS': 5000
+        }
+
+        rus = RandomUnderSampler(sampling_strategy=down_dic, random_state=0)
+        sm = SMOTE(kind='regular', sampling_strategy=up_dic, random_state=0)
+
+        print("Data Resampling...")
+        x_resampled, y_resampled = rus.fit_sample(x, y)
+        x_resampled1, y_resampled1 = sm.fit_sample(x_resampled, y_resampled)
+        x_resampled2 = pd.DataFrame(x_resampled1)
+        y_resampled2 = pd.DataFrame(y_resampled1)
+
+        data_resampled = pd.concat([x_resampled2, y_resampled2], axis=1)
+        data_resampled = pd.DataFrame(data_resampled)
+
+
+        print("After OverSampling, the shape of train_x:{}".format(data_resampled.shape))
+        print("After OverSampling, the shape of train_x:{} \n".format(data_resampled.shape))
+
+        data_resampled.to_csv("../dataset/fin_dataset/(논문구현_dilated).csv", header=features, index=False)
+        data_resampled = pd.read_csv("../dataset/fin_dataset/(논문구현_dilated).csv", sep=',', dtype='unicode')
+        print(data_resampled)
+
+        return data_resampled
+
+    def feature_extraction(x, y, features):
+        RF = RandomForestClassifier(random_state=0, n_jobs=-1)
+        RFmodel = RF.fit(x, y)
+        Importances = RFmodel.feature_importances_
+        print(Importances)
+        std = np.std([tree.feature_importances_ for tree in RFmodel.estimators_],
+                     axis=0)
+        indices = np.argsort(Importances)[::-1]
+        print('Feature Ranking:')
+
+        for f in range(x.shape[1]):
+            print("%d. feature %d (%f)" % (f + 1, indices[f], Importances[indices[f]]))
+
+        plt.figure()
+        plt.title("Feature importances")
+        plt.bar(range(x.shape[1]), Importances[indices],
+                color="b", yerr=std[indices])
+        plt.xticks(range(x.shape[1]), indices, rotation=90)
+        plt.xlim([-1, x.shape[1]])
+        plt.show()
+
+        xx = pd.DataFrame(x)
+
+        # Feature Correlation
+
+        drop_feature = ['Total Backward Packets', 'Total Length of Bwd Packets', 'Bwd Packet Length Mean',
+                        'Bwd Packet Length Std', 'Fwd IAT Total', 'Fwd IAT Max', 'Fwd Packets/s', 'Max Packet Length',
+                        'Packet Length Std', 'Average Packet Size', 'Avg Fwd Segment Size', 'Avg Bwd Segment Size',
+                        'Fwd Header Length',
+                        'Subflow Fwd Packets', 'Subflow Fwd Bytes', 'Subflow Bwd Packets', 'Subflow Bwd Bytes', 'Idle Mean',
+                        'Idle Max', 'Idle Min']
+
+        corr = xx.rank().corr(method="spearman")
+        print(corr, len(corr))
+
+        for t in range(corr길이):
+            if corr[[t]] > 0.95:
+                xx = xx.drop(//, axis=1)
+                print("corr:", xx)
+        import sys
+        sys.exit(1)
+        for k in range(len(Importances)):
+            if Importances[k] < 0.001:
+                xx = xx.drop(features[k], axis=1)
+                print("importance:", xx)
+
+        fe_data = pd.concat([xx, y], axis=1)
+        print(fe_data)
+
+        return fe_data
+
+    def normalizations(fe_data, normalization_type):
+        print('Data Normalizing...')
+        fe_data1 = pd.DataFrame(fe_data)
+        # fe_data1 = fe_data1.rename(columns={'Fwd Header Length.1': 'Fwd Header Length'})
+        y, x = fe_data1['Label'], fe_data1.drop('Label', 1)
+        x.dropna(axis=0)
+        x = x[(x.T != 0).any()]
+        remain_features = fe_data1.head(n=0)
+
+
+        if normalization_type == 'mms':
+            mms = minmax_scale(x, feature_range=(0, 255))
+            mms = pd.DataFrame(mms)
+            y = pd.DataFrame(y)
+            norm_set = mms[(mms.T != 0).any()]  # Remove Zero records
+            norm_set = pd.concat([norm_set, y], axis=1)
+
+        if normalization_type == 'std':
+            std = StandardScaler()
+            x_scale = std.fit_transform(x)
+            x_scale = pd.DataFrame(x_scale)
+            y = pd.DataFrame(y)
+            norm_set = x_scale[(x_scale.T != 0).any()]  # Remove Zero records
+            norm_set = pd.concat([norm_set, y], axis=1)
+
+        if normalization_type == 'qnt':
+            qnt = quantile_transform(x, n_quantiles=15, subsample=832373)
+            print("qnt: ", qnt)
+            y = pd.DataFrame(y)
+            print("norm_set")
+            qnt = pd.DataFrame(qnt)
+            norm_set = qnt[(qnt.T != 0).any()]  # Remove Zero records
+            print(type(norm_set))
+            norm_set = pd.concat([norm_set, y], axis=1)
+
+        print(norm_set)
+
+        norm_set.dropna(axis=1)
+        norm_set.to_csv("../dataset/fin_dataset/"+normalization_type+"4.csv", header=list(remain_features), index=False)
+
+        return norm_set
+
+    def data_split(split_data):
+        print("[train_set] <=> [test_set]")
+
+        train_set, test_set = train_test_split(split_data, test_size=0.3)
+
+        train_Y, train_X = train_set['Label'], train_set.drop('Label', 1)
+        test_Y, test_X = test_set['Label'], test_set.drop('Label', 1)
+        raw_encoded, raw_cat = test_set["Label"].factorize()
+
+        return train_X, train_Y, test_X, test_Y, raw_encoded, raw_cat
+
+    def train_model(train_X, train_Y, classes_y, test_X, test_Y):
+        print('model training...')
+
+        print('MLP Classifier')
+        use_model = MLPClassifier(hidden_layer_sizes=(30, 10), max_iter=10, random_state=42)
+
+        mini_batch_size = 10000
+        batch_size = len(train_Y)
+        total_epoch = int(batch_size / mini_batch_size)
+        current_batch = 0
+
+        for i in range(1, total_epoch):
+            end_batch = i * mini_batch_size
+            use_model._partial_fit(train_X[current_batch:end_batch], train_Y[current_batch:end_batch], classes=classes_y)
+            current_batch = end_batch
+
+        use_model._partial_fit(train_X[current_batch:batch_size], train_Y[current_batch:batch_size], classes=classes_y)
+        use_model_score = cross_val_score(use_model, test_X, test_Y, scoring='accuracy', cv=10, n_jobs=8)
+        use_model_cross_val = cross_val_predict(use_model, test_X, test_Y, cv=10, n_jobs=8)
+        use_model_confusion_matrix = confusion_matrix(test_Y, use_model_cross_val)
+
+        return use_model_cross_val, use_model_score, use_model_confusion_matrix
+
+    if __name__ == "__main__":
+        features = ['Destination Port', 'Flow Duration', 'Total Fwd Packets', 'Total Backward Packets', 'Total Length of Fwd Packets', 'Total Length of Bwd Packets', 'Fwd Packet Length Max', 'Fwd Packet Length Min', 'Fwd Packet Length Mean', 'Fwd Packet Length Std', 'Bwd Packet Length Max', 'Bwd Packet Length Min', 'Bwd Packet Length Mean', 'Bwd Packet Length Std', 'Flow Bytes/s','Flow Packets/s', 'Flow IAT Mean', 'Flow IAT Std', 'Flow IAT Max', 'Flow IAT Min', 'Fwd IAT Total', 'Fwd IAT Mean', 'Fwd IAT Std', 'Fwd IAT Max', 'Fwd IAT Min', 'Bwd IAT Total', 'Bwd IAT Mean', 'Bwd IAT Std', 'Bwd IAT Max', 'Bwd IAT Min', 'Fwd PSH Flags', 'Bwd PSH Flags', 'Fwd URG Flags', 'Bwd URG Flags', 'Fwd Header Length', 'Bwd Header Length', 'Fwd Packets/s', 'Bwd Packets/s', 'Min Packet Length', 'Max Packet Length', 'Packet Length Mean', 'Packet Length Std', 'Packet Length Variance', 'FIN Flag Count', 'SYN Flag Count', 'RST Flag Count', 'PSH Flag Count', 'ACK Flag Count', 'URG Flag Count', 'CWE Flag Count', 'ECE Flag Count', 'Down/Up Ratio', 'Average Packet Size', 'Avg Fwd Segment Size', 'Avg Bwd Segment Size', 'Fwd Header Length', 'Fwd Avg Bytes/Bulk', 'Fwd Avg Packets/Bulk', 'Fwd Avg Bulk Rate', 'Bwd Avg Bytes/Bulk', 'Bwd Avg Packets/Bulk', 'Bwd Avg Bulk Rate', 'Subflow Fwd Packets', 'Subflow Fwd Bytes', 'Subflow Bwd Packets', 'Subflow Bwd Bytes', 'Init_Win_bytes_forward', 'Init_Win_bytes_backward', 'act_data_pkt_fwd', 'min_seg_size_forward', 'Active Mean', 'Active Std', 'Active Max', 'Active Min', 'Idle Mean', 'Idle Std', 'Idle Max', 'Idle Min', 'Label']
+        data_loc = "../dataset/fin_dataset/"
+        data_format = ".csv"
+        data_file = "5. combine_dataset"
+
+        print("Data Loading...")
+        data = pd.read_csv(data_loc+data_file+data_format, sep=',', dtype='unicode')
+
+        data, data_Label = data_cleaning(data)
+        classes_y = np.unique(data_Label)
+
+        new_data = semi_balancing(data, data_Label, features)
+        new_data = pd.DataFrame(new_data)
+        bal_data_Label, bal_data = new_data['Label'], new_data.drop('Label', 1)
+
+        fe = feature_extraction(bal_data, bal_data_Label, features)
+
+        normalization_type = ['qnt', 'mms', 'std']
+        for norm in range(len(normalization_type)):
+            norm_data = normalizations(fe, normalization_type[norm])
+            if norm == 1:
+                mms_data = norm_data
+
+                print(mms_data)
+                train_X, train_Y, test_X, test_Y, raw_encoded, raw_cat = data_split(mms_data)
+                use_model_cross_val, use_model_score, use_model_confusion_matrix = train_model(train_X, train_Y,
+                                                                                               classes_y, test_X,
+                                                                                               test_Y)
+                report = classification_report(test_Y, use_model_cross_val, target_names=raw_cat)
+                print(use_model_score, use_model_confusion_matrix)
+                print(str(report))
+
+            if norm == 2:
+                std_data = norm_data
+                train_X, train_Y, test_X, test_Y, raw_encoded, raw_cat = data_split(std_data)
+                use_model_cross_val, use_model_score, use_model_confusion_matrix = train_model(train_X, train_Y,
+                                                                                               classes_y, test_X,
+                                                                                               test_Y)
+                report = classification_report(test_Y, use_model_cross_val, target_names=raw_cat)
+                print(use_model_score, use_model_confusion_matrix)
+                print(str(report))
+
+            if norm == 0:
+                qnt_data = norm_data
+                train_X, train_Y, test_X, test_Y, raw_encoded, raw_cat = data_split(qnt_data)
+                use_model_cross_val, use_model_score, use_model_confusion_matrix = train_model(train_X, train_Y,
+                                                                                               classes_y, test_X,
+                                                                                               test_Y)
+                report = classification_report(test_Y, use_model_cross_val, target_names=raw_cat)
+                print(use_model_score, use_model_confusion_matrix)
+                print(str(report))
