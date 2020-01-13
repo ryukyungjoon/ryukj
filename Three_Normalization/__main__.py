@@ -4,6 +4,7 @@ from Three_Normalization.Feature_Extraction import Feature_Extraction as fe
 from Three_Normalization.Data_Normalization import Data_Normalization as dn
 from Three_Normalization.Data_split import Data_split as ds
 from Three_Normalization.Train_model import Train_model as tm
+from Three_Normalization.Train_model import DNN as dnn
 from Three_Normalization.Drawing import Drawing as dw
 
 from sklearn.metrics import classification_report
@@ -25,6 +26,7 @@ class Main:
         classes_y = np.unique(data_Label)
 
         new_data = sb.sampling_1(data, data_Label, features)
+        # new_data = sb.sampling_2(data, data_Label, features)
         new_data = pd.DataFrame(new_data)
         print(new_data)
         bal_data_Label, bal_data = new_data['Label'], new_data.drop('Label', 1)
@@ -33,15 +35,21 @@ class Main:
 
         normalization_type = ['mms', 'std', 'qnt']
 
-        for norm in range(0, len(normalization_type)-1):
+        for norm in range(0, len(normalization_type)):
             norm_data = dn.normalizations(fe, normalization_type[norm])
             train_X, train_Y, test_X, test_Y, raw_encoded, raw_cat = ds.data_split(norm_data)
-            use_model_cross_val, use_model_score, use_model_confusion_matrix = tm.train_model(train_X, train_Y,
-                                                                                              classes_y, test_X,
-                                                                                              test_Y)
-            report = classification_report(test_Y, use_model_cross_val, target_names=raw_cat)
-            # 그래프 그리기(confusion matrix)
-            dw.print_confusion_matrix(use_model_confusion_matrix, classes_y)
+            performance_test = dnn.dnn_model(train_X, train_Y, test_X, test_Y)
+            print('Test Loss and Accuracy ->', performance_test)
 
-
-            print(str(report))
+        # for norm in range(0, len(normalization_type)):
+        #     norm_data = dn.normalizations(fe, normalization_type[norm])
+        #     train_X, train_Y, test_X, test_Y, raw_encoded, raw_cat = ds.data_split(norm_data)
+        #     use_model_cross_val, use_model_score, use_model_confusion_matrix = tm.train_model(train_X, train_Y,
+        #                                                                                       classes_y, test_X,
+        #                                                                                       test_Y)
+        #     report = classification_report(test_Y, use_model_cross_val, target_names=raw_cat)
+        #     # 그래프 그리기(confusion matrix, histogram)
+        #     dw.print_confusion_matrix(use_model_confusion_matrix, classes_y)
+        #     # dw.print_score_graph(use_model_score, index=classes_y, columns=classes_y)
+        #
+        #     print(str(report))
