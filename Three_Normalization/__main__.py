@@ -1,3 +1,6 @@
+import pandas as pd
+import numpy as np
+
 from Three_Normalization.Data_cleaning import Cleaning as cl
 from Three_Normalization.Semi_balancing import Semi_balancing as sb
 from Three_Normalization.Feature_Extraction import Feature_Extraction as fe
@@ -7,10 +10,7 @@ from Three_Normalization.Train_model import Train_model as tm
 from Three_Normalization.Train_model import DNN as dnn
 from Three_Normalization.Drawing import Drawing as dw
 
-from sklearn.metrics import classification_report
 
-import pandas as pd
-import numpy as np
 
 class Main:
     if __name__ == "__main__":
@@ -38,18 +38,23 @@ class Main:
         for norm in range(0, len(normalization_type)):
             norm_data = dn.normalizations(fe, normalization_type[norm])
             train_X, train_Y, test_X, test_Y, raw_encoded, raw_cat = ds.data_split(norm_data)
-            performance_test = dnn.dnn_model(train_X, train_Y, test_X, test_Y)
+            performance_test, history = dnn.dnn_model(train_X, train_Y, test_X, test_Y)
             print('Test Loss and Accuracy ->', performance_test)
 
-        # for norm in range(0, len(normalization_type)):
-        #     norm_data = dn.normalizations(fe, normalization_type[norm])
-        #     train_X, train_Y, test_X, test_Y, raw_encoded, raw_cat = ds.data_split(norm_data)
-        #     use_model_cross_val, use_model_score, use_model_confusion_matrix = tm.train_model(train_X, train_Y,
-        #                                                                                       classes_y, test_X,
-        #                                                                                       test_Y)
-        #     report = classification_report(test_Y, use_model_cross_val, target_names=raw_cat)
-        #     # 그래프 그리기(confusion matrix, histogram)
-        #     dw.print_confusion_matrix(use_model_confusion_matrix, classes_y)
-        #     # dw.print_score_graph(use_model_score, index=classes_y, columns=classes_y)
-        #
-        #     print(str(report))
+            dw.drawplot(history)
+        '''
+        for norm in range(0, len(normalization_type)):
+            norm_data = dn.normalizations(fe, normalization_type[norm])
+            train_X, train_Y, test_X, test_Y, raw_encoded, raw_cat = ds.data_split(norm_data)
+            use_model_cross_val, use_model_score, use_model_confusion_matrix = tm.train_model(train_X, train_Y,
+                                                                                              classes_y, test_X,
+                                                                                              test_Y)
+            report = classification_report(test_Y, use_model_cross_val, target_names=raw_cat)
+        
+            # 그래프 그리기(confusion matrix, histogram)
+            dw.print_confusion_matrix(use_model_confusion_matrix, classes_y)
+            # dw.print_score_graph(use_model_score, index=classes_y, columns=classes_y)
+
+            print(str(report))
+        '''
+

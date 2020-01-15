@@ -3,16 +3,21 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import cross_val_predict, cross_val_score
 from sklearn.metrics import accuracy_score, recall_score, f1_score
 from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import OneHotEncoder
 
-import keras
-import numpy as np
 from keras import layers, models
-from keras.utils import np_utils
+
 from tensorflow.keras.utils import to_categorical
 from collections import Counter
 
+from matplotlib import pyplot as plt
+
+import pandas as pd
+import numpy as np
+
 
 class Train_model:
+
     def train_model(train_X, train_Y, classes_y, test_X, test_Y):
         print('model training...')
 
@@ -39,7 +44,7 @@ class Train_model:
         return use_model_cross_val, use_model_score, use_model_confusion_matrix
 
 Nin = 49                # 입력 노드의 개수
-Nh_l = [100, 50]        # 히든 레이어 개수
+Nh_l = [1000, 500, 100]        # 히든 레이어 개수
 number_of_class = 15    # 분류 클래스 개수
 Nout = number_of_class  # 출력 노드의 개수
 
@@ -49,6 +54,7 @@ class DNN(models.Sequential):
         super().__init__()
         self.add(layers.Dense(Nh_l[0], activation='relu', input_shape=(Nin,), name='Hidden-1'))
         self.add(layers.Dense(Nh_l[1], activation='relu', name='Hidden-2'))
+        self.add(layers.Dense(Nh_l[2], activation='relu', name='Hidden-3'))
         self.add(layers.Dense(Nout, activation='softmax'))
         self.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
@@ -56,28 +62,93 @@ class DNN(models.Sequential):
         print('model training...')
         print('DNN Classifier')
 
-        print(train_Y)
-        train_cnt_Y = Counter(train_Y)
-        test_cnt_Y = Counter(test_Y)
-        classes_y = len(train_cnt_Y.keys())
-        print('Attack Type Count : {}'.format(dict(train_cnt_Y)))
+        ## train_X reshape
 
-        # Label(Type : String -> Float)
+        train_X = np.array(train_X)
+        test_X = np.array(test_X)
+
+        print(train_X.shape)
+        print(test_X.shape)
+
+        a, b = train_X.shape     # 2D shape를 가진다.
+        a1, b1 = test_X.shape
+
+        train_X = train_X.reshape(-1, b)
+        test_X = test_X.reshape(-1, b1)
+
+        train_X = np.array(train_X)
+        test_X = np.array(test_X)
+
+        print(train_X.shape)
+        print(test_X.shape)
+
+        ## Count Y_Label
+        train_Y_cnt = Counter(train_Y)
+        test_Y_cnt = Counter(test_Y)
+
+        output_size = len(train_Y_cnt.keys())
+        output_size2 = len(test_Y_cnt.keys())
+        print('train Attack Sample Count : {}'.format(dict(train_Y_cnt)))
+        print('test Attack Sample Count : {}'.format(dict(test_Y_cnt)))
+        print('Total Output Size : {}'.format(output_size))
+        print('Total Output Size : {}'.format(output_size2))
+
+        ## String 2 Float
         l_encoder = LabelEncoder()
-        train_Y = l_encoder.fit(train_Y)
-        print('float type {}'.format(train_Y))
+        y_train = l_encoder.fit_transform(train_Y)
+        y_test = l_encoder.fit_transform(test_Y)
 
         key = ['BENIGN', 'DDoS', 'DoS GoldenEye', 'Heartbleed', 'PortScan', 'Bot', 'FTP-Patator', 'DoS Hulk', 'Web Attack XSS', 'DoS slowloris', 'Web Attack Sql Injection', 'Web Attack Brute Force', 'DoS Slowhttptest', 'Infiltration', 'SSH-Patator']
         value = l_encoder.transform(key)
+        attack_mapping = dict(zip(key, value))
+
+        print('Attack Mapping : {}'.format(attack_mapping))
+
+        ## One-Hot
+        re = to_categorical(y_train, num_classes=output_size)
+        re2 = to_categorical(y_test, num_classes=output_size)
+        print('Original Data : {}'.format(train_Y))
+        print('Original Data : {}'.format(test_Y))
+        print('\nOne-Hot Result from Y_Train : \n{}'.format(re))
+        print('\nOne-Hot Result from Y_Train : \n{}'.format(re2))
+
+        '''
+        train_cnt_Y = Counter(train_Y)
+        test_cnt_Y = Counter(test_Y)
+        classes_y = len(train_cnt_Y.keys())
+        print('Attack Type Count : {}\n'.format(dict(train_cnt_Y)))
+        print('Attack Type Count : {}'.format(dict(test_cnt_Y)))
+
+
+        # Label(Type : String -> Float)
+        l_encoder = LabelEncoder()
+        l_encoder2 = LabelEncoder()
+        train_Y = l_encoder.fit(train_Y)
+        test_Y = l_encoder2.fit(test_Y)
+        # print('train', train_Y)
+        # print('test', test_Y)
+
+        key = ['BENIGN', 'DDoS', 'DoS GoldenEye', 'Heartbleed', 'PortScan', 'Bot', 'FTP-Patator', 'DoS Hulk', 'Web Attack XSS', 'DoS slowloris', 'Web Attack Sql Injection', 'Web Attack Brute Force', 'DoS Slowhttptest', 'Infiltration', 'SSH-Patator']
+
+        value = l_encoder.transform(key)
+        value2 = l_encoder2.transform(key)
         attack_maping = dict(zip(key, value))
+        attack_maping2 = dict(zip(key, value2))
         print('Attack Mapping : {}'.format(attack_maping))
+        print('Attack Mapping2 : {}'.format(attack_maping2))
 
-        train_Y = to_categorical(train_Y, num_classes=classes_y)
-        test_Y = to_categorical(test_Y, num_classes=classes_y)
+        onehot_encoder = OneHotEncoder()
+
+        train_Y = onehot_encoder.fit_transform(train_Y)
+        test_Y = onehot_encoder.fit_transform(test_Y)
+
+        # train_Y = to_categorical(train_Y, num_classes=classes_y)
+        # test_Y = to_categorical(test_Y, num_classes=classes_y)
         print('one-hot encoding : \n train_Y {} \n test_Y {}'.format(train_Y, test_Y))
-
+        '''
         use_model = DNN(Nin, Nh_l, Nout)
-        history = use_model.fit(train_X, train_Y, epochs=100, batch_size=10000, validation_split=0.2)
+        history = use_model.fit(train_X, train_Y, epochs=100, batch_size=10000,
+                                validation_split=0.2, verbose=1)
         performance_test = use_model.evaluate(test_X, test_Y, batch_size=10000)
 
-        return performance_test
+        return performance_test, history

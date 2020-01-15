@@ -14,10 +14,10 @@ class Feature_Extraction:
                      axis=0)
         indices = np.argsort(Importances)[::-1]
         print('Feature Ranking:')
-
         for f in range(x.shape[1]):
             print("%d. feature %d (%f)" % (f + 1, indices[f], Importances[indices[f]]))
 
+        # Drawing Feature Importance Graph
         plt.figure()
         plt.title("Feature importances")
         plt.bar(range(x.shape[1]), Importances[indices],
@@ -31,18 +31,15 @@ class Feature_Extraction:
         #Feature Importance
         print("indices:", indices)
         for k in range(len(Importances)):
-            print(Importances[indices[k]])
             if Importances[indices[k]] < 0.001:
                 f = indices[k]
-                print(f)
                 xx = xx.drop(features[f], axis=1)
-        print("importance:", xx)
 
         # Feature Correlation
         corr = xx.rank().corr(method="spearman")
         corr = pd.DataFrame(corr)
-
         columns = np.full((corr.shape[0],), True, dtype=bool)
+
         for i in range(corr.shape[0]):
             for j in range(i + 1, corr.shape[0]):
                 if corr.iloc[i, j] >= 0.95:
@@ -51,10 +48,9 @@ class Feature_Extraction:
 
         selected_columns = xx.columns[columns]
         xx = xx[selected_columns]
-        print("XX:", xx)
+        print("XX: {}".format(xx))
         fe_data = pd.concat([xx, y], axis=1)
         remain_features = fe_data.head(0)
-        print(fe_data)
         fe_data = pd.DataFrame(fe_data)
         fe_data.to_csv("../dataset/fin_dataset/Feature_Extraction.csv", header=list(remain_features), index=False)
 

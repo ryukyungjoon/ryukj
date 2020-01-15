@@ -26,3 +26,7 @@ class Drawing:
         plt.ylabel("score")
         plt.xlabel("")
         plt.show()
+
+    def drawplot(history):
+        plt.plot(history)
+        plt.show()
